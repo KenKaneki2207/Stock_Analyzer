@@ -1,99 +1,78 @@
-import streamlit as st
-from streamlit_lightweight_charts import renderLightweightCharts
-import pandas as pd
+import warnings
 
-charts = ['Candle', 'Line']
+# Suppress all warnings
+warnings.filterwarnings("ignore")
 
-def candle_stick(data):
-    chartOptions = {
-        "layout": {
-            "textColor": 'white',
-            "background": {
-                "type": 'solid',
-                "color": 'black'
-            }
-        },
-        "timeScale": {  
-            "timeVisible": True,  
-            "secondsVisible": False,
-            "minBarSpacing": 6,
-        },
-        "grid": {
-            "vertLines": {
-                "visible": False  # Disable vertical grid lines
-            },
-            "horzLines": {
-                "visible": False  # Disable horizontal grid lines
-            }
-        },
-        'height': 580,
-    }
+# returns the color of the candle
+def color(candle):
+    open, close = candle[0] , candle[3]
+    if open > close:
+        return 'r'
+    else:
+        return 'g'
 
-    seriesCandlestickChart = [
-        {
-            "type": 'Candlestick',
-            "data": data,
-            "options": {
-                "upColor": '#26a69a',
-                "downColor": '#ef5350',
-                "borderVisible": False,
-                "wickUpColor": '#26a69a',
-                "wickDownColor": '#ef5350'
-            }
-        }
-    ]
+# returns the length of body and shadow
+def anatomy(candle):
+    open, high, low, close = candle[0], candle[1], candle[2], candle[3]
 
-    renderLightweightCharts([
-        {
-            "chart": chartOptions,
-            "series": seriesCandlestickChart
-        }
-    ], 'candlestick')
+    body = round(abs(close - open), 2)
+    upper_shadow = round(min((high - close), (high - open)), 2)
+    lower_shadow = round(min((close - low), (open - low)), 2)
+    full = round(high - low, 2)
+    return body, upper_shadow, lower_shadow, full
 
-def line_chart(data):
-    chartOptions = {
-        "layout": {
-            "textColor": 'white',
-            "background": {
-                "type": 'solid',
-                "color": 'black'
-            }
-        },
-        "timeScale": {  
-            "timeVisible": True,  
-            "secondsVisible": False,
-            "minBarSpacing": 4,
-        },
-        "grid": {
-            "vertLines": {
-                "visible": False  # Disable vertical grid lines
-            },
-            "horzLines": {
-                "visible": False  # Disable horizontal grid lines
-            }
-        },
-        'height': 580,
-        'width' : 880,
-    }
+# hammer pattern
+def hammer(candle):
+    body, upper_shadow, lower_shadow, full = anatomy(candle)
+    if lower_shadow > 1.5*body and upper_shadow/full < 0.1:
+        return True
+    else:
+        return False 
 
-    seriesLineChart = [
-        {
-            "type": 'Line',
-            "data": data,
-            "options": {
-                "color": '#26a69a',
-                "lineWidth": 2,
-                "crossHairMarkerVisible": True,
-                "crossHairMarkerRadius": 4,
-                "priceLineVisible": True
-            }
-        }
-    ]
+# inverted hammer
+def inverted_hammer(candle):
+    body, upper_shadow, lower_shadow, full = anatomy(candle)
+    if upper_shadow > 1.5*body and lower_shadow/full < 0.1:
+        return True
+    else:
+        return False
 
-    renderLightweightCharts([
-        {
-            "chart": chartOptions,
-            "series": seriesLineChart
-        }
-    ], 'line_chart')
+# marubozu candle
+def marubozu(candle):
+    body, upper_shadow, lower_shadow, full = anatomy(candle)
+    if lower_shadow/full < 0.1 and upper_shadow/full < 0.1:
+        return True
+    else:
+        return False
 
+# bullush_englufing 
+def bullish_engulfing(candle1, candle2):
+    body1, upper_shadow1, lower_shadow1, full1 = anatomy(candle1)
+    body2, upper_shadow2, lower_shadow2, full2 = anatomy(candle2)
+    if color(candle1) == "r" and color(candle2) == "g":
+        if body1 < body2:
+            if candle1['Close'] >= candle2['Open'] and candle1['Open'] <= candle2['Close']:
+                return True 
+    return False
+
+# piercing line
+def piercing_line(candle1, candle2):
+    body1, upper_shadow1, lower_shadow1, full1 = anatomy(candle1)
+    body2, upper_shadow2, lower_shadow2, full2 = anatomy(candle2)
+    if color(candle1) == "r" and color(candle2) == "g":
+        candle_1_50per = body1*0.5 + candle1['Close']
+        if candle1['Close'] > candle2['Open'] and candle2['Close'] > (candle_1_50per):
+            return True
+    return False
+
+def pattern_recoginzer(candle1, candle2):
+    if hammer(candle1):
+        return "Hammer"
+    elif marubozu(candle1):
+        return "Marubozu"
+    elif bullish_engulfing(candle1, candle2):
+        return "Bullish Engulfing"
+    elif piercing_line(candle1, candle2):
+        return "Pirecing Line"
+    else:
+        return None

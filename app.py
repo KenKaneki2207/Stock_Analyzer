@@ -1,51 +1,45 @@
 import streamlit as st
-st.set_page_config(layout="wide")
+# Set the app in wide view
+st.set_page_config(layout="wide") 
+import time
 
-import streamlit.components.v1 as components
-from load import *
-from pattern import *
-from tp import *
+# Loading data from different scripts
+from load import stock_list, intervals, chart_data
+from chart import display_chart, charts
 
-# Sidebar for stock selection
+st.sidebar.image("logo.jpg", use_container_width=True, width=5000)
+
+# Sidebar 
 st.sidebar.title('Choose an Option')
 stock = st.sidebar.selectbox(
     'Select stock:',
     stock_list
 )
 
-# Sidebar for intervals 
 interval = st.sidebar.selectbox(
     'Select interval:',
     intervals
 )
 
-# Sidebar for chart selection
 chart = st.sidebar.selectbox(
     'Select chart:',
     charts
 )
 
-col1, col2 = st.columns([3, 1])
+nofs = [{'Pattern': 'Bearish Engulfing', 'Time': '2021-09-01 09:00:00', 'Stock': 'HINDALCO', 'Interval': '1d'},
+        {'Pattern': 'Bearish Engulfing', 'Time': '2021-09-01 09:00:00', 'Stock': 'HINDALCO', 'Interval': '1d'}]
+# Notifications Sidebar
+st.sidebar.title('Notifications')
+st.sidebar.markdown(f"""
+<div style=" overflow-y: auto; background-color: #0E1118; padding: 10px; border-radius: 8px;">
+    {"".join([f"<p><strong>{notification['Pattern']}</strong> at {notification['Time']} for {notification['Stock']} ({notification['Interval']})</p>" for notification in nofs])}
+</div>
+""", unsafe_allow_html=True)
 
-# Embed the HTML content in the first column
-with col1:
-    if chart == 'Candle':
-        df = pd.read_csv(f'stock_data/{interval}/{stock}.csv')
-        data = df.to_dict(orient='records')
-
-        # Plot the candlestick pattern with the interval
-        candle_stick(data)
-
-    if chart == "Line":
-        df = pd.read_csv(f'stock_data/{interval}/{stock}.csv')
-        df = df[['time', 'close']]
-        df = df.rename(columns={'close':'value'})
-        data = df.to_dict(orient='records')
-
-        line_chart(data)
-
-with col2:
-    # Read the HTML content from right_sidebar.html
-    with open('notification.html', 'r') as file:
-        right_sidebar_html = file.read()
-    components.html(right_sidebar_html)
+with st.empty():
+    data = chart_data(chart, stock, interval)
+    date = True
+    if interval == '1d':
+        date = False
+    display_chart(chart, data, key=f"{chart}_{time.time()}", date=date)
+    time.sleep(60)
